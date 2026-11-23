@@ -43,6 +43,11 @@ export default function Admin() {
   const { refresh, products, categories, orders, settings, soldCounts } = useStore()
   const [email, setEmail] = useState(ADMIN_EMAIL)
   const [password, setPassword] = useState('')
+  // Mode reset password: dibuka lewat link reset dari email Supabase.
+  const [resetMode, setResetMode] = useState(false)
+  const [newPassword, setNewPassword] = useState('')
+  const [newPassword2, setNewPassword2] = useState('')
+  const [linkError, setLinkError] = useState('')
   const [authed, setAuthed] = useState(false)
   const [checking, setChecking] = useState(true)
   const [tab, setTab] = useState<Tab>('overview')
@@ -51,7 +56,18 @@ export default function Admin() {
 
   useEffect(() => {
     const sb = requireSupabase()
+    // Link reset yang kedaluwarsa / sudah dipakai akan kembali dengan
+    // #error=access_denied&error_code=otp_expired di alamatnya.
+    if (window.location.hash.includes('otp_expired') || window.location.hash.includes('access_denied')) {
+      setLinkError('Link reset sudah kedaluwarsa atau sudah pernah dipakai. Minta link reset yang baru dari Supabase, lalu klik secepatnya (link hanya berlaku sebentar dan sekali pakai).')
+    }
+    // Supabase mengirim event ini saat link reset password yang valid dibuka.
+    const { data: listener } = sb.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') setResetMode(true)
+    })
+    if (window.location.hash.includes('type=recovery')) setResetMode(true)
     sb.auth.getSession().then(({ data }) => { setAuthed(Boolean(data.session)); setChecking(false) })
+    return () => listener.subscription.unsubscribe()
   }, [])
 
   async function login(e: React.FormEvent) {
@@ -73,11 +89,42 @@ export default function Admin() {
     setAuthed(false)
   }
 
+  async function resetPassword(e: React.FormEvent) {
+    e.preventDefault()
+    setErr('')
+    if (newPassword.length < 6) { setErr('Password baru minimal 6 karakter.'); return }
+    if (newPassword !== newPassword2) { setErr('Konfirmasi password tidak sama.'); return }
+    try {
+      const { error } = await requireSupabase().auth.updateUser({ password: newPassword })
+      if (error) throw error
+      setMsg('Password berhasil diubah. Kamu sudah masuk ke dashboard.')
+      setResetMode(false)
+      setAuthed(true)
+      await refresh()
+    } catch (e2) {
+      setErr(e2 instanceof Error ? e2.message : 'Gagal mengubah password — link mungkin sudah kedaluwarsa, minta link baru.')
+    }
+  }
+
   if (checking) return <p>Memeriksa sesi…</p>
+  if (resetMode && !authed) {
+    return (
+      <div className="max-w-sm mx-auto">
+        <h1 className="font-display text-3xl font-bold mb-4">Buat Password Baru</h1>
+        <form onSubmit={resetPassword} className="card space-y-4">
+          <div><label className="label">Password baru</label><input className="input" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoFocus /></div>
+          <div><label className="label">Ulangi password baru</label><input className="input" type="password" value={newPassword2} onChange={(e) => setNewPassword2(e.target.value)} /></div>
+          {err && <p className="text-sm text-red-600">{err}</p>}
+          <button className="btn-primary w-full">Simpan Password Baru</button>
+        </form>
+      </div>
+    )
+  }
   if (!authed) {
     return (
       <div className="max-w-sm mx-auto">
         <h1 className="font-display text-3xl font-bold mb-4">Login Admin</h1>
+        {linkError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2 mb-4">{linkError}</p>}
         <form onSubmit={login} className="card space-y-4">
           {ADMIN_EMAIL ? (
             <p className="text-sm text-gray-500">Login admin — cukup masukkan password.</p>
