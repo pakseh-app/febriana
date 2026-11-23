@@ -33,9 +33,15 @@ function fmtDate(d?: string) {
 
 type Tab = 'overview' | 'produk' | 'kategori' | 'pesanan' | 'pengaturan'
 
+// Email admin disimpan di konfigurasi (VITE_ADMIN_EMAIL), jadi di halaman
+// login admin hanya perlu memasukkan password. Email ini harus sama dengan
+// akun yang dibuat di Supabase → Authentication → Users. Kalau variabel ini
+// belum diisi, kolom email tetap ditampilkan sebagai cadangan.
+const ADMIN_EMAIL = (import.meta.env.VITE_ADMIN_EMAIL as string | undefined) || ''
+
 export default function Admin() {
   const { refresh, products, categories, orders, settings, soldCounts } = useStore()
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(ADMIN_EMAIL)
   const [password, setPassword] = useState('')
   const [authed, setAuthed] = useState(false)
   const [checking, setChecking] = useState(true)
@@ -73,8 +79,12 @@ export default function Admin() {
       <div className="max-w-sm mx-auto">
         <h1 className="font-display text-3xl font-bold mb-4">Login Admin</h1>
         <form onSubmit={login} className="card space-y-4">
-          <div><label className="label">Email admin</label><input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-          <div><label className="label">Password</label><input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+          {ADMIN_EMAIL ? (
+            <p className="text-sm text-gray-500">Login admin — cukup masukkan password.</p>
+          ) : (
+            <div><label className="label">Email admin</label><input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+          )}
+          <div><label className="label">Password</label><input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoFocus /></div>
           {err && <p className="text-sm text-red-600">{err}</p>}
           <button className="btn-primary w-full">Masuk Dashboard</button>
           <p className="text-xs text-gray-500">Akun dibuat di Supabase → Authentication → Users (Add user, centang Auto Confirm User).</p>
