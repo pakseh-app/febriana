@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body { @apply bg-cream text-ink font-sans; }
+.btn-primary { @apply bg-ink text-white px-5 py-3 rounded-full font-medium hover:opacity-90 disabled:opacity-50; }
+.btn-outline { @apply border border-ink px-5 py-3 rounded-full font-medium hover:bg-beige; }
+.input { @apply w-full border border-sand rounded-xl px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-gold; }
+.label { @apply block text-sm font-medium mb-1; }
+.card { @apply bg-white rounded-2xl shadow-sm border border-beige p-4; }
