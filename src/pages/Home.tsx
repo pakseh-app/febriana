@@ -13,6 +13,12 @@ export default function Home() {
   const { products, categories, loading, settings, soldCounts, configured, whatsapp, storeName } = useStore()
   const best = [...products].sort((a, b) => (soldCounts[b.id] ?? 0) - (soldCounts[a.id] ?? 0)).slice(0, 4)
   const newest = products.slice(0, 8)
+  const recent = (() => {
+    try {
+      const ids: string[] = JSON.parse(localStorage.getItem('febriana-recent') || '[]')
+      return ids.map((id) => products.find((p) => p.id === id)).filter((p): p is typeof products[number] => Boolean(p)).slice(0, 4)
+    } catch { return [] }
+  })()
   return (
     <div className="space-y-12">
       {/* Hero */}
@@ -96,6 +102,15 @@ export default function Home() {
             </div>
           </section>
         </>
+      )}
+
+      {recent.length > 0 && (
+        <section>
+          <h2 className="font-display text-2xl font-bold mb-4">Terakhir Kamu Lihat</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {recent.map((p) => <ProductCard key={p.id} product={p} />)}
+          </div>
+        </section>
       )}
 
       {/* CTA + sosmed */}

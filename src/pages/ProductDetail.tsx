@@ -1,7 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useStore } from '../context/StoreContext'
 import { rupiah } from '../lib/format'
+import ProductCard from '../components/ProductCard'
+
+const RECENT_KEY = 'febriana-recent'
 
 export default function ProductDetail() {
   const { id } = useParams()
@@ -12,6 +15,18 @@ export default function ProductDetail() {
   const [color, setColor] = useState('')
   const [qty, setQty] = useState(1)
   const [img, setImg] = useState(0)
+  const [copied, setCopied] = useState(false)
+  const related = product ? products.filter((p) => p.id !== product.id && p.category_id && p.category_id === product.category_id).slice(0, 4) : []
+
+  // Simpan ke "Terakhir Dilihat" di Beranda
+  useEffect(() => {
+    if (!id) return
+    try {
+      const prev: string[] = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]')
+      const next = [id, ...prev.filter((x) => x !== id)].slice(0, 8)
+      localStorage.setItem(RECENT_KEY, JSON.stringify(next))
+    } catch { /* abaikan */ }
+  }, [id])
   if (!product) return <p className="card">Produk tidak ditemukan.</p>
   const price = product.discount_price ?? product.price
   const needSize = product.sizes.length > 0 && !size
@@ -79,7 +94,37 @@ export default function ProductDetail() {
           </button>
         </div>
         {(needSize || needColor) && <p className="text-sm text-amber-700 mt-2">Pilih ukuran dan warna dulu.</p>}
+        <div className="mt-6 pt-5 border-t border-beige">
+          <p className="text-sm font-medium mb-2">Bagikan produk ini:</p>
+          <div className="flex flex-wrap gap-2">
+            <a
+              className="btn-outline !py-2 !px-4 text-sm"
+              target="_blank"
+              rel="noreferrer"
+              href={`https://wa.me/?text=${encodeURIComponent(`${product.name} — ${rupiah(price)} di FEBRIANA: ${window.location.href}`)}`}
+            >
+              Bagikan via WhatsApp
+            </a>
+            <button
+              className="btn-outline !py-2 !px-4 text-sm"
+              onClick={async () => {
+                try { await navigator.clipboard.writeText(window.location.href); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch { /* clipboard tidak tersedia */ }
+              }}
+            >
+              {copied ? 'Link disalin ✓' : 'Salin Link Produk'}
+            </button>
+          </div>
+        </div>
       </div>
+      {related.length > 0 && (
+        <div className="md:col-span-2">
+          <h2 className="font-display text-2xl font-bold mb-4">Produk Terkait</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {related.map((p) => <ProductCard key={p.id} product={p} />)}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+

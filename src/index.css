@@ -8,3 +8,24 @@ body { @apply bg-cream text-ink font-sans; }
 .input { @apply w-full border border-sand rounded-xl px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-gold; }
 .label { @apply block text-sm font-medium mb-1; }
 .card { @apply bg-white rounded-2xl shadow-sm border border-beige p-4; }
+
+/* Mode malam — menimpa warna terang di seluruh situs */
+.dark body { background-color: #14171d; color: #f1efe9; }
+.dark .bg-cream { background-color: #14171d; }
+.dark .bg-beige { background-color: #232833; }
+.dark .bg-white { background-color: #1d212b; }
+.dark .bg-sand { background-color: #2c3340; }
+.dark .text-ink { color: #f1efe9; }
+.dark .text-gray-700 { color: #d5d9e0; }
+.dark .text-gray-600, .dark .text-gray-500 { color: #a7adb8; }
+.dark .text-gray-400 { color: #8a919e; }
+.dark .border-beige, .dark .border-sand { border-color: #333a47; }
+.dark .card { background-color: #1d212b; border-color: #333a47; }
+.dark .input { background-color: #1d212b; border-color: #333a47; color: #f1efe9; }
+.dark .input::placeholder { color: #7c8494; }
+.dark .btn-outline { border-color: #4a5261; color: #f1efe9; }
+.dark .btn-outline:hover { background-color: #232833; }
+.dark .btn-primary { background-color: #e8e2d4; color: #14171d; }
+.dark header { background-color: rgba(20, 23, 29, 0.95); }
+.dark .bg-gradient-to-br { background-image: linear-gradient(to bottom right, #232833, #171a21, #2c3340); }
+.dark .bg-amber-50, .dark .bg-green-50, .dark .bg-red-50, .dark .bg-sky-100, .dark .bg-violet-100, .dark .bg-blue-100, .dark .bg-green-100, .dark .bg-amber-100 { filter: brightness(0.85); }

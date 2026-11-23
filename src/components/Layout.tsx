@@ -1,12 +1,25 @@
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useStore } from '../context/StoreContext'
 import { prettyPhone, socialUrl, waLink } from '../lib/format'
 import { SocialIcon, socialLinksFromSettings } from './SocialIcons'
 
+function useTheme() {
+  const [dark, setDark] = useState(() => {
+    try { return localStorage.getItem('febriana-theme') === 'dark' } catch { return false }
+  })
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark)
+    try { localStorage.setItem('febriana-theme', dark ? 'dark' : 'light') } catch { /* abaikan */ }
+  }, [dark])
+  return { dark, toggle: () => setDark((d) => !d) }
+}
+
 export default function Layout() {
-  const { cart, settings, whatsapp, storeName, configured } = useStore()
+  const { cart, wishlist, settings, whatsapp, storeName, configured } = useStore()
   const navigate = useNavigate()
   const count = cart.reduce((n, l) => n + l.qty, 0)
+  const { dark, toggle } = useTheme()
   const logo = settings?.logo_url
   return (
     <div className="min-h-screen flex flex-col">
@@ -23,6 +36,12 @@ export default function Layout() {
             <NavLink to="/kontak" className="hover:text-gold">Kontak</NavLink>
           </nav>
           <div className="ml-auto flex items-center gap-2">
+            <button onClick={toggle} className="border border-sand rounded-full w-9 h-9 flex items-center justify-center text-lg" title={dark ? 'Mode terang' : 'Mode malam'} aria-label="Ganti mode gelap/terang">
+              {dark ? '☀️' : '🌙'}
+            </button>
+            <button onClick={() => navigate('/katalog?wishlist=1')} className="relative border border-ink rounded-full px-4 py-2 text-sm" title="Lihat wishlist">
+              ♥ {wishlist.length > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">{wishlist.length}</span>}
+            </button>
             <button onClick={() => navigate('/keranjang')} className="relative border border-ink rounded-full px-4 py-2 text-sm">
               Keranjang {count > 0 && <span className="absolute -top-2 -right-2 bg-gold text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">{count}</span>}
             </button>

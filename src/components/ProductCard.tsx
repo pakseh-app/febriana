@@ -8,9 +8,11 @@ export default function ProductCard({ product }: { product: Product }) {
   const price = product.discount_price ?? product.price
   const wished = wishlist.includes(product.id)
   const img = product.images?.[0]
+  const discPct = product.discount_price ? Math.round((1 - product.discount_price / product.price) * 100) : 0
   return (
     <div className="card flex flex-col">
-      <Link to={`/produk/${product.id}`}>
+      <Link to={`/produk/${product.id}`} className="relative block">
+        {discPct > 0 && <span className="absolute top-2 left-2 z-10 bg-red-600 text-white text-xs font-bold rounded-full px-2 py-1">-{discPct}%</span>}
         {img ? (
           <img src={img} alt={product.name} className="w-full h-56 object-cover rounded-xl" />
         ) : (
