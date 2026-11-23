@@ -9,10 +9,13 @@ import Checkout from './pages/Checkout'
 import { About, Contact } from './pages/Info'
 import Admin from './pages/Admin'
 
+// Di GitHub Pages situs tinggal di /febriana/, jadi semua rute harus
+// diawali /febriana/ — tanpa ini, refresh atau kembali ke Beranda akan
+// mendarat di pakseh-app.github.io (404). Di laptop (npm run dev) tetap "/".
 export default function App() {
   return (
     <StoreProvider>
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.DEV ? '/' : '/febriana'}>
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<Home />} />

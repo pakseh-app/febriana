@@ -660,12 +660,12 @@ function SettingsManager({ settings, onDone, onError }: { settings: import('../l
       <div className="card flex items-center justify-between gap-3 flex-wrap">
         <div>
           <div className="font-bold">Link Toko</div>
-          <div className="text-sm text-gray-500 break-all">{window.location.origin}/</div>
+          <div className="text-sm text-gray-500 break-all">{`${window.location.origin}${window.location.pathname.startsWith('/febriana') ? '/febriana/' : '/'}`}</div>
         </div>
         <button
           className="btn-outline !py-2"
           onClick={async () => {
-            try { await navigator.clipboard.writeText(`${window.location.origin}/`); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch { /* clipboard tidak tersedia */ }
+            try { await navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname.startsWith('/febriana') ? '/febriana/' : '/'}`); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch { /* clipboard tidak tersedia */ }
           }}
         >
           {copied ? 'Disalin ✓' : 'Salin Link Toko'}
