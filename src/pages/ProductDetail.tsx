@@ -97,9 +97,16 @@ export default function ProductDetail() {
           <button
             className="btn-primary"
             disabled={product.stock <= 0 || needSize || needColor}
+            onClick={() => { addToCart(product, size, color, qty); navigate('/checkout') }}
+          >
+            {product.stock <= 0 ? 'Stok Habis' : 'Beli Sekarang'}
+          </button>
+          <button
+            className="btn-outline"
+            disabled={product.stock <= 0 || needSize || needColor}
             onClick={() => { addToCart(product, size, color, qty); navigate('/keranjang') }}
           >
-            {product.stock <= 0 ? 'Stok Habis' : 'Tambah ke Keranjang'}
+            Tambah ke Keranjang
           </button>
           <button className="btn-outline" onClick={() => toggleWishlist(product.id)}>
             {wishlist.includes(product.id) ? '♥ Di Wishlist' : '♡ Wishlist'}
