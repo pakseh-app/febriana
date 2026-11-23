@@ -1,11 +1,12 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '../context/StoreContext'
 import { rupiah } from '../lib/format'
+import { sellPrice } from '../lib/types'
 
 export default function Cart() {
   const { cart, setQty, removeFromCart } = useStore()
   const navigate = useNavigate()
-  const total = cart.reduce((n, l) => n + (l.product.discount_price ?? l.product.price) * l.qty, 0)
+  const total = cart.reduce((n, l) => n + sellPrice(l.product, l.size) * l.qty, 0)
   if (cart.length === 0) {
     return (
       <div className="card text-center py-10">
@@ -19,7 +20,7 @@ export default function Cart() {
       <h1 className="font-display text-3xl font-bold mb-4">Keranjang</h1>
       <div className="space-y-3">
         {cart.map((l) => {
-          const price = l.product.discount_price ?? l.product.price
+          const price = sellPrice(l.product, l.size)
           return (
             <div key={`${l.product.id}-${l.size}-${l.color}`} className="card flex gap-4 items-center">
               {l.product.images?.[0] ? (

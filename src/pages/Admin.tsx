@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { requireSupabase } from '../lib/supabase'
 import { useStore } from '../context/StoreContext'
 import { rupiah, waLink } from '../lib/format'
-import { APPROVED_STATUSES, ORDER_STATUSES, type Category, type Order, type Product } from '../lib/types'
+import { APPROVED_STATUSES, ORDER_STATUSES, minPrice, type Category, type Order, type Product, type SizePrice } from '../lib/types'
 
 async function uploadImage(bucket: string, file: File): Promise<string> {
   const sb = requireSupabase()
@@ -311,7 +311,9 @@ function ProductManager({ onDone, onError }: { onDone: (m: string) => void; onEr
   const [price, setPrice] = useState('')
   const [discount, setDiscount] = useState('')
   const [categoryId, setCategoryId] = useState('')
-  const [sizes, setSizes] = useState('')
+  // Satu baris per ukuran, masing-masing punya harga sendiri.
+  // Contoh: S Rp20.000, XL Rp35.000.
+  const [sizeRows, setSizeRows] = useState<{ size: string; price: string; discount: string }[]>([])
   const [colors, setColors] = useState('')
   const [stock, setStock] = useState('0')
   const [desc, setDesc] = useState('')
@@ -325,22 +327,38 @@ function ProductManager({ onDone, onError }: { onDone: (m: string) => void; onEr
   const [sort, setSort] = useState<'baru' | 'terlaris' | 'termurah' | 'termahal' | 'stok'>('baru')
 
   function startNew() {
-    setEditing(null); setName(''); setPrice(''); setDiscount(''); setCategoryId(''); setSizes(''); setColors(''); setStock('0'); setDesc(''); setImages([]); setActive(true); setIsNew(false); setIsBest(false)
+    setEditing(null); setName(''); setPrice(''); setDiscount(''); setCategoryId(''); setSizeRows([]); setColors(''); setStock('0'); setDesc(''); setImages([]); setActive(true); setIsNew(false); setIsBest(false)
   }
   function startEdit(p: Product) {
     setEditing(p); setName(p.name); setPrice(String(p.price)); setDiscount(p.discount_price ? String(p.discount_price) : '')
-    setCategoryId(p.category_id || ''); setSizes(p.sizes.join(', ')); setColors(p.colors.join(', '))
+    setCategoryId(p.category_id || '')
+    setSizeRows((p.sizes || []).map((s) => {
+      const sp = p.size_prices?.[s]
+      return { size: s, price: String(sp?.price ?? p.price), discount: sp?.discount_price ? String(sp.discount_price) : (p.discount_price ? String(p.discount_price) : '') }
+    }))
+    setColors(p.colors.join(', '))
     setStock(String(p.stock)); setDesc(p.description || ''); setImages(p.images || []); setActive(p.active !== false)
     setIsNew(Boolean(p.is_new)); setIsBest(Boolean(p.is_best_seller))
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
+  // Upload banyak foto sekaligus: semua file diunggah bersamaan, jadi
+  // memilih 5 foto di galeri langsung mengunggah kelimanya.
+  const [uploadProgress, setUploadProgress] = useState('')
   async function handleUpload(files: FileList | null) {
     if (!files?.length) return
+    const list = Array.from(files)
     setUploading(true)
+    setUploadProgress(`Mengunggah 0/${list.length} foto…`)
     try {
-      const urls: string[] = []
-      for (const f of Array.from(files)) urls.push(await uploadImage('product-images', f))
+      let done = 0
+      const urls = await Promise.all(list.map(async (f) => {
+        const url = await uploadImage('product-images', f)
+        done += 1
+        setUploadProgress(`Mengunggah ${done}/${list.length} foto…`)
+        return url
+      }))
       setImages((prev) => [...prev, ...urls])
+      setUploadProgress('')
     } catch (e) { onError(e instanceof Error ? e.message : 'Upload gagal — pastikan policy Storage admin sudah dijalankan (supabase/admin-policies.sql).') }
     finally { setUploading(false) }
   }
@@ -348,9 +366,17 @@ function ProductManager({ onDone, onError }: { onDone: (m: string) => void; onEr
     e.preventDefault()
     try {
       const sb = requireSupabase()
+      const rows = sizeRows.map((r) => ({ size: r.size.trim(), price: Number(r.price) || 0, discount: r.discount ? Number(r.discount) : null })).filter((r) => r.size && r.price > 0)
+      const sizePrices: Record<string, SizePrice> = {}
+      for (const r of rows) sizePrices[r.size] = { price: r.price, discount_price: r.discount }
+      // Harga dasar = harga termurah di antara ukuran (jadi harga di katalog
+      // dan harga cadangan kalau ukuran tidak punya harga sendiri).
+      const basePrice = rows.length ? Math.min(...rows.map((r) => r.price)) : Number(price)
+      const baseRow = rows.find((r) => r.price === basePrice)
       const payload = {
-        name: name.trim(), price: Number(price), discount_price: discount ? Number(discount) : null,
-        category_id: categoryId || null, sizes: sizes.split(',').map((s) => s.trim()).filter(Boolean),
+        name: name.trim(), price: basePrice, discount_price: rows.length ? (baseRow?.discount ?? null) : (discount ? Number(discount) : null),
+        size_prices: sizePrices,
+        category_id: categoryId || null, sizes: rows.map((r) => r.size),
         colors: colors.split(',').map((s) => s.trim()).filter(Boolean), stock: Number(stock),
         description: desc.trim() || null, images, active, is_new: isNew, is_best_seller: isBest,
       }
@@ -373,7 +399,7 @@ function ProductManager({ onDone, onError }: { onDone: (m: string) => void; onEr
   async function duplicate(p: Product) {
     try {
       const { error } = await requireSupabase().from('products').insert({
-        name: `${p.name} (salinan)`, price: p.price, discount_price: p.discount_price, category_id: p.category_id,
+        name: `${p.name} (salinan)`, price: p.price, discount_price: p.discount_price, size_prices: p.size_prices || {}, category_id: p.category_id,
         sizes: p.sizes, colors: p.colors, stock: p.stock, description: p.description, images: p.images, active: false,
         is_new: false, is_best_seller: false,
       })
@@ -406,8 +432,8 @@ function ProductManager({ onDone, onError }: { onDone: (m: string) => void; onEr
     const by = {
       baru: (a: Product, b: Product) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime(),
       terlaris: (a: Product, b: Product) => (soldCounts[b.id] ?? 0) - (soldCounts[a.id] ?? 0),
-      termurah: (a: Product, b: Product) => (a.discount_price ?? a.price) - (b.discount_price ?? b.price),
-      termahal: (a: Product, b: Product) => (b.discount_price ?? b.price) - (a.discount_price ?? a.price),
+      termurah: (a: Product, b: Product) => minPrice(a) - minPrice(b),
+      termahal: (a: Product, b: Product) => minPrice(b) - minPrice(a),
       stok: (a: Product, b: Product) => a.stock - b.stock,
     }[sort]
     return [...list].sort(by)
@@ -427,10 +453,25 @@ function ProductManager({ onDone, onError }: { onDone: (m: string) => void; onEr
               {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
-          <div><label className="label">Harga (Rp)</label><input className="input" type="number" value={price} onChange={(e) => setPrice(e.target.value)} required /></div>
-          <div><label className="label">Harga diskon (Rp, kosongkan bila tidak ada)</label><input className="input" type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} /></div>
-          <div><label className="label">Ukuran (pisah koma, contoh: S, M, L)</label><input className="input" value={sizes} onChange={(e) => setSizes(e.target.value)} /></div>
+          <div><label className="label">Harga dasar (Rp) — dipakai kalau produk tanpa ukuran</label><input className="input" type="number" value={price} onChange={(e) => setPrice(e.target.value)} required /></div>
+          <div><label className="label">Harga diskon dasar (Rp, kosongkan bila tidak ada)</label><input className="input" type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} /></div>
           <div><label className="label">Warna (pisah koma)</label><input className="input" value={colors} onChange={(e) => setColors(e.target.value)} /></div>
+        </div>
+        <div>
+          <label className="label">Ukuran &amp; harga per ukuran — contoh: S Rp20.000, XL Rp35.000 (kosongkan bila produk tanpa ukuran)</label>
+          <div className="space-y-2">
+            {sizeRows.map((row, i) => (
+              <div key={i} className="flex flex-wrap gap-2 items-center">
+                <input className="input !w-20" placeholder="S" value={row.size} onChange={(e) => setSizeRows(sizeRows.map((r, j) => j === i ? { ...r, size: e.target.value } : r))} />
+                <input className="input !w-36" type="number" placeholder="Harga (Rp)" value={row.price} onChange={(e) => setSizeRows(sizeRows.map((r, j) => j === i ? { ...r, price: e.target.value } : r))} />
+                <input className="input !w-36" type="number" placeholder="Diskon (Rp, opsional)" value={row.discount} onChange={(e) => setSizeRows(sizeRows.map((r, j) => j === i ? { ...r, discount: e.target.value } : r))} />
+                <button type="button" className="btn-outline !py-2 !px-3" onClick={() => setSizeRows(sizeRows.filter((_, j) => j !== i))}>Hapus</button>
+              </div>
+            ))}
+            <button type="button" className="btn-outline !py-2" onClick={() => setSizeRows([...sizeRows, { size: '', price: '', discount: '' }])}>+ Tambah Ukuran</button>
+          </div>
+        </div>
+        <div className="grid md:grid-cols-2 gap-3">
           <div><label className="label">Stok</label><input className="input" type="number" value={stock} onChange={(e) => setStock(e.target.value)} /></div>
           <div className="flex flex-wrap gap-4 items-end pb-2">
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} /> Tampilkan di katalog</label>
@@ -440,9 +481,9 @@ function ProductManager({ onDone, onError }: { onDone: (m: string) => void; onEr
         </div>
         <div><label className="label">Deskripsi</label><textarea className="input" rows={3} value={desc} onChange={(e) => setDesc(e.target.value)} /></div>
         <div>
-          <label className="label">Foto produk (bucket product-images) — foto pertama jadi foto utama</label>
-          <input type="file" accept="image/*" multiple onChange={(e) => handleUpload(e.target.files)} />
-          {uploading && <p className="text-sm">Mengunggah…</p>}
+          <label className="label">Foto produk — pilih banyak foto sekaligus dari galeri (tahan untuk memilih beberapa), foto pertama jadi foto utama</label>
+          <input type="file" accept="image/*" multiple onChange={(e) => { handleUpload(e.target.files); e.target.value = '' }} />
+          {uploading && <p className="text-sm">{uploadProgress || 'Mengunggah…'}</p>}
           <div className="flex gap-2 mt-2 flex-wrap">
             {images.map((src, i) => (
               <div key={i} className="relative">
@@ -487,7 +528,7 @@ function ProductManager({ onDone, onError }: { onDone: (m: string) => void; onEr
                   </span>
                 </td>
                 <td>{catName(p.category_id)}</td>
-                <td>{rupiah(p.discount_price ?? p.price)}{p.discount_price ? <span className="block text-xs line-through text-gray-400">{rupiah(p.price)}</span> : null}</td>
+                <td>{p.sizes.length > 1 ? 'Mulai ' : ''}{rupiah(minPrice(p))}</td>
                 <td>{soldCounts[p.id] ?? 0}</td>
                 <td>
                   <span className="inline-flex items-center gap-1">

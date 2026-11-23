@@ -47,6 +47,14 @@ menyimpan produk/pesanan/pengaturan** (error row-level security).
 Buka Supabase → **SQL Editor** → **New query**, tempel isi file
 `supabase/admin-policies.sql`, klik **Run**.
 
+## Langkah 2b — Harga per ukuran (WAJIB sekali saja, untuk produk yang sudah ada)
+
+Supaya satu produk bisa punya harga berbeda per ukuran (misal daster S
+Rp20.000, XL Rp35.000), jalankan juga file `supabase/size-prices.sql` di
+SQL Editor. File ini menambah kolom `size_prices` dan mengisi harga awal
+produk lama dari harga yang sudah ada — produk baru diisi otomatis dari
+form admin (bagian "Ukuran & harga per ukuran").
+
 ## Langkah 3 — Jalankan di laptop
 
 ```bash

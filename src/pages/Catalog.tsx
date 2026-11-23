@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useStore } from '../context/StoreContext'
+import { minPrice } from '../lib/types'
 import ProductCard from '../components/ProductCard'
 
 export default function Catalog() {
@@ -27,8 +28,8 @@ export default function Catalog() {
     })
     const by = {
       baru: (a: typeof products[number], b: typeof products[number]) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime(),
-      termurah: (a: typeof products[number], b: typeof products[number]) => (a.discount_price ?? a.price) - (b.discount_price ?? b.price),
-      termahal: (a: typeof products[number], b: typeof products[number]) => (b.discount_price ?? b.price) - (a.discount_price ?? a.price),
+      termurah: (a: typeof products[number], b: typeof products[number]) => minPrice(a) - minPrice(b),
+      termahal: (a: typeof products[number], b: typeof products[number]) => minPrice(b) - minPrice(a),
       terlaris: (a: typeof products[number], b: typeof products[number]) => (soldCounts[b.id] ?? 0) - (soldCounts[a.id] ?? 0),
       nama: (a: typeof products[number], b: typeof products[number]) => a.name.localeCompare(b.name, 'id'),
     }[sort]

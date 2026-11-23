@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useStore } from '../context/StoreContext'
 import { buildOrderMessage, rupiah, waLink } from '../lib/format'
 import { requireSupabase } from '../lib/supabase'
+import { sellPrice } from '../lib/types'
 import type { OrderItem } from '../lib/types'
 
 export default function Checkout() {
@@ -14,7 +15,7 @@ export default function Checkout() {
   const [note, setNote] = useState('')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
-  const total = cart.reduce((n, l) => n + (l.product.discount_price ?? l.product.price) * l.qty, 0)
+  const total = cart.reduce((n, l) => n + sellPrice(l.product, l.size) * l.qty, 0)
 
   if (cart.length === 0) return <p className="card">Keranjang kosong — isi dulu dari katalog.</p>
 
@@ -30,7 +31,7 @@ export default function Checkout() {
         size: l.size || undefined,
         color: l.color || undefined,
         qty: l.qty,
-        price: l.product.discount_price ?? l.product.price,
+        price: sellPrice(l.product, l.size),
       }))
       const sb = requireSupabase()
       // Simpan pesanan dulu (status Menunggu Konfirmasi), baru buka WhatsApp.
@@ -63,7 +64,7 @@ export default function Checkout() {
         {cart.map((l) => (
           <div key={`${l.product.id}-${l.size}-${l.color}`} className="flex justify-between text-sm py-1">
             <span>{l.product.name} x{l.qty}</span>
-            <span>{rupiah((l.product.discount_price ?? l.product.price) * l.qty)}</span>
+            <span>{rupiah(sellPrice(l.product, l.size) * l.qty)}</span>
           </div>
         ))}
         <div className="flex justify-between font-bold border-t mt-2 pt-2"><span>Total</span><span>{rupiah(total)}</span></div>

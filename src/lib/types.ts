@@ -9,12 +9,17 @@ export type Category = {
   created_at?: string
 }
 
+export type SizePrice = { price: number; discount_price?: number | null }
+
 export type Product = {
   id: string
   name: string
   description: string | null
   price: number
   discount_price: number | null
+  // Harga per ukuran, misal {"S": {"price": 20000}, "XL": {"price": 35000}}.
+  // Ukuran yang tidak ada di sini memakai harga dasar (price/discount_price).
+  size_prices?: Record<string, SizePrice> | null
   category_id: string | null
   sizes: string[]
   colors: string[]
@@ -73,6 +78,27 @@ export const ORDER_STATUSES = [
   'Selesai',
   'Dibatalkan',
 ]
+
+// Harga yang berlaku untuk satu ukuran. Kalau ukuran tidak punya harga
+// sendiri, pakai harga dasar produk.
+export function priceFor(p: Product, size?: string): { price: number; discount_price: number | null } {
+  const sp = size ? p.size_prices?.[size] : undefined
+  if (sp && typeof sp.price === 'number') return { price: sp.price, discount_price: sp.discount_price ?? null }
+  return { price: p.price, discount_price: p.discount_price }
+}
+
+// Harga jual efektif (setelah diskon, bila ada) untuk satu ukuran.
+export function sellPrice(p: Product, size?: string): number {
+  const { price, discount_price } = priceFor(p, size)
+  return discount_price ?? price
+}
+
+// Harga jual termurah di antara semua ukuran — dipakai di kartu produk
+// ("Mulai Rp…") dan urutan Termurah/Termahal.
+export function minPrice(p: Product): number {
+  if (!p.sizes?.length) return sellPrice(p)
+  return Math.min(...p.sizes.map((s) => sellPrice(p, s)))
+}
 
 export function soldCountFor(productId: string, orders: Order[]): number {
   let n = 0

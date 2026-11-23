@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useStore } from '../context/StoreContext'
 import { rupiah } from '../lib/format'
+import { minPrice, priceFor, sellPrice } from '../lib/types'
 import ProductCard from '../components/ProductCard'
 
 const RECENT_KEY = 'febriana-recent'
@@ -28,7 +29,10 @@ export default function ProductDetail() {
     } catch { /* abaikan */ }
   }, [id])
   if (!product) return <p className="card">Produk tidak ditemukan.</p>
-  const price = product.discount_price ?? product.price
+  // Harga mengikuti ukuran yang dipilih (misal S Rp20.000, XL Rp35.000);
+  // sebelum memilih ukuran, tampilkan harga termurah.
+  const { price: basePrice, discount_price: baseDisc } = priceFor(product, size || undefined)
+  const price = size ? (baseDisc ?? basePrice) : minPrice(product)
   const needSize = product.sizes.length > 0 && !size
   const needColor = product.colors.length > 0 && !color
   return (
@@ -50,8 +54,13 @@ export default function ProductDetail() {
       <div>
         <h1 className="font-display text-3xl font-bold">{product.name}</h1>
         <div className="mt-2 flex items-baseline gap-2">
+          {!size && product.sizes.length > 1 && <span className="text-sm text-gray-500">Mulai</span>}
           <span className="text-2xl font-bold">{rupiah(price)}</span>
-          {product.discount_price && <span className="line-through text-gray-400">{rupiah(product.price)}</span>}
+          {size ? (
+            baseDisc && <span className="line-through text-gray-400">{rupiah(basePrice)}</span>
+          ) : (
+            product.discount_price && <span className="line-through text-gray-400">{rupiah(product.price)}</span>
+          )}
         </div>
         <p className="text-sm text-gray-500 mt-1">Terjual {soldCounts[product.id] ?? 0} · Stok {product.stock}</p>
         <p className="mt-4 text-gray-700 whitespace-pre-line">{product.description || '—'}</p>
@@ -60,7 +69,10 @@ export default function ProductDetail() {
             <span className="label">Ukuran</span>
             <div className="flex flex-wrap gap-2">
               {product.sizes.map((s) => (
-                <button key={s} onClick={() => setSize(s)} className={`px-4 py-2 rounded-full border ${size === s ? 'bg-ink text-white' : 'border-sand bg-white'}`}>{s}</button>
+                <button key={s} onClick={() => setSize(s)} className={`px-4 py-2 rounded-full border text-center ${size === s ? 'bg-ink text-white' : 'border-sand bg-white'}`}>
+                  <span className="block font-medium">{s}</span>
+                  <span className={`block text-xs ${size === s ? 'text-gray-300' : 'text-gray-500'}`}>{rupiah(sellPrice(product, s))}</span>
+                </button>
               ))}
             </div>
           </div>

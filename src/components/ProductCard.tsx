@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom'
 import { useStore } from '../context/StoreContext'
 import { rupiah } from '../lib/format'
+import { minPrice } from '../lib/types'
 import type { Product } from '../lib/types'
 
 export default function ProductCard({ product }: { product: Product }) {
   const { soldCounts, wishlist, toggleWishlist } = useStore()
-  const price = product.discount_price ?? product.price
+  const price = minPrice(product)
   const wished = wishlist.includes(product.id)
   const img = product.images?.[0]
   const discPct = product.discount_price ? Math.round((1 - product.discount_price / product.price) * 100) : 0
@@ -22,6 +23,7 @@ export default function ProductCard({ product }: { product: Product }) {
       <div className="mt-3 flex-1">
         <Link to={`/produk/${product.id}`} className="font-medium hover:text-gold">{product.name}</Link>
         <div className="mt-1 flex items-baseline gap-2">
+          {product.sizes.length > 1 && <span className="text-xs text-gray-500">Mulai</span>}
           <span className="font-bold">{rupiah(price)}</span>
           {product.discount_price && <span className="text-sm line-through text-gray-400">{rupiah(product.price)}</span>}
         </div>
