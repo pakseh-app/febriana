@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { requireSupabase } from '../lib/supabase'
 import { useStore } from '../context/StoreContext'
 import { rupiah, waLink } from '../lib/format'
@@ -159,7 +160,7 @@ export default function Admin() {
           <p className="text-sm text-gray-500 mt-1">Halo, Admin {settings?.store_name || 'FEBRIANA'} — {pending > 0 ? `${pending} pesanan menunggu konfirmasi.` : 'tidak ada pesanan yang menunggu.'}</p>
         </div>
         <div className="flex gap-2">
-          <a href="/" target="_blank" rel="noreferrer" className="btn-outline !py-2">Lihat Toko ↗</a>
+          <Link to="/" target="_blank" rel="noreferrer" className="btn-outline !py-2">Lihat Toko ↗</Link>
           <button className="btn-outline !py-2" onClick={logout}>Keluar</button>
         </div>
       </div>
